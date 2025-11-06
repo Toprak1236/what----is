@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZarNova Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    #chat {
+      width: 100%;
+      max-width: 500px;
+      height: 400px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 20px;
+    }
+    #messageInput {
+      width: 80%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      margin-right: 5px;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      background: #00bcd4;
+      color: white;
+      cursor: pointer;
+    }
+    #login {
+      margin-top: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>ZarNova Chat 💬</h1>
+
+  <div id="login">
+    <button id="googleLogin">Google ile Giriş Yap</button>
+  </div>
+
+  <div id="chatSection" style="display:none;">
+    <div id="chat"></div>
+    <div style="margin-top:10px;">
+      <input type="text" id="messageInput" placeholder="Mesaj yaz..." />
+      <button id="sendBtn">Gönder</button>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    // ⚙️ BURAYA KENDİ CONFIGİNİ KOY (Firebase console > Project settings > Web app)
+   const firebaseConfig = {
+      apiKey: "AIzaSyAVLBory0WasYJIEfmW-ffkj23VDwNFkpc",
+      authDomain: "zarnova-ced1e.firebaseapp.com",
+      projectId: "zarnova-ced1e",
+      storageBucket: "zarnova-ced1e.appspot.com",
+      messagingSenderId: "986703034851",
+      appId: "1:986703034851:web:4ae17a43f62182e6fe48d6"
+    };
+
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("googleLogin");
+    const chatDiv = document.getElementById("chat");
+    const chatSection = document.getElementById("chatSection");
+    const messageInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    let currentUser = null;
+
+    // Giriş
+    loginBtn.onclick = async () => {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        currentUser = result.user;
+        document.getElementById("login").style.display = "none";
+        chatSection.style.display = "block";
+        loadMessages();
+      } catch (error) {
+        alert("Giriş hatası: " + error.message);
+      }
+    };
+
+    // Mesaj gönder
+    sendBtn.onclick = async () => {
+      const text = messageInput.value.trim();
+      if (!text || !currentUser) return;
+      await addDoc(collection(db, "messages"), {
+        user: currentUser.displayName || currentUser.email,
+        text,
+        time: serverTimestamp()
+      });
+      messageInput.value = "";
+    };
+
+    // Mesajları dinle
+    function loadMessages() {
+      const q = query(collection(db, "messages"), orderBy("time"));
+      onSnapshot(q, (snapshot) => {
+        chatDiv.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const msg = doc.data();
+          const p = document.createElement("p");
+          p.innerHTML = `<b>${msg.user}:</b> ${msg.text}`;
+          chatDiv.appendChild(p);
+        });
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+      });
+    }
+  </script>
+</body>
+</html>
